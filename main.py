@@ -120,7 +120,6 @@ daily_avg = total_kwh_now / days_passed
 
 # Дата следующего 25-го числа
 if today.day >= REPORT_DAY:
-    # Если сегодня уже 25-е или позже, ищем 25-е число следующего месяца
     next_month = today.replace(day=1) + timedelta(days=32)
     next_report = next_month.replace(day=REPORT_DAY)
 else:
@@ -132,4 +131,30 @@ projected_kwh = total_kwh_now + (daily_avg * (total_days - days_passed))
 # Вывод метрик
 st.divider()
 st.subheader("Текущее состояние")
-m1, m2, m
+m1, m2, m3 = st.columns(3)
+m1.metric("Нагорело сейчас", f"{total_kwh_now:.1f} кВт")
+m2.metric("Сумма к оплате", f"{calculate_precise_cost(delta_day, delta_night):.2f} ₽")
+m3.metric("Среднее в сутки", f"{daily_avg:.1f} кВт")
+
+# Прогноз
+st.divider()
+st.subheader("📈 Прогноз к 25-му числу")
+p1, p2, p3 = st.columns(3)
+p1.metric("Итого к концу месяца", f"{projected_kwh:.0f} кВт")
+
+# Прогноз стоимости (сохраняя пропорцию день/ночь)
+ratio = delta_day / total_kwh_now if total_kwh_now > 0 else 0.5
+proj_cost = calculate_precise_cost(projected_kwh * ratio, projected_kwh * (1-ratio))
+p2.metric("Прогноз счета", f"{proj_cost:.2f} ₽")
+
+if projected_kwh <= 1100:
+    p3.success("Зона I (Оптимально)")
+elif projected_kwh <= 1700:
+    p3.warning("Зона II (Повышенная)")
+else:
+    p3.error("Зона III (Максимальная!)")
+
+# График
+chart_df = pd.DataFrame({
+    'День': [0, days_passed, total_days],
+    'к
