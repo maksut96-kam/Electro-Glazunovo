@@ -85,4 +85,51 @@ def calculate_precise_cost(d_kwh, n_kwh):
     return cost
 
 # --- ИНТЕРФЕЙС ---
-st.set_page_config(page_title="Электро-Глаз", page_icon="⚡", layout
+st.set_page_config(page_title="Электро-Глаз", page_icon="⚡", layout="wide")
+st.title("⚡ Мониторинг электричества (Сочи)")
+
+settings = load_settings()
+
+# Боковая панель настроек
+with st.expander("⚙️ Настройка базы (официальные показания за 25-е число)"):
+    off_date = st.date_input("Дата сдачи", value=settings["date"])
+    c_off1, c_off2 = st.columns(2)
+    off_day = c_off1.number_input("Базовый День", value=settings["day"])
+    off_night = c_off2.number_input("Базовая Ночь", value=settings["night"])
+    
+    if st.button("💾 Сохранить базу"):
+        save_settings(off_day, off_night, off_date)
+        st.success("База обновлена!")
+        st.rerun()
+
+# Ввод текущих значений
+st.subheader(f"Текущий замер (отсчет от {settings['date']})")
+col1, col2 = st.columns(2)
+curr_day = col1.number_input("Показания День сейчас", value=off_day)
+curr_night = col2.number_input("Показания Ночь сейчас", value=off_night)
+
+# Расчет потребления
+delta_day = max(0.0, curr_day - off_day)
+delta_night = max(0.0, curr_night - off_night)
+total_kwh_now = delta_day + delta_night
+
+# Расчет прогноза
+today = datetime.now().date()
+days_passed = max(1, (today - settings["date"]).days)
+daily_avg = total_kwh_now / days_passed
+
+# Дата следующего 25-го числа
+if today.day >= REPORT_DAY:
+    # Если сегодня уже 25-е или позже, ищем 25-е число следующего месяца
+    next_month = today.replace(day=1) + timedelta(days=32)
+    next_report = next_month.replace(day=REPORT_DAY)
+else:
+    next_report = today.replace(day=REPORT_DAY)
+
+total_days = (next_report - settings["date"]).days
+projected_kwh = total_kwh_now + (daily_avg * (total_days - days_passed))
+
+# Вывод метрик
+st.divider()
+st.subheader("Текущее состояние")
+m1, m2, m
